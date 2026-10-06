@@ -19,11 +19,15 @@ Open http://127.0.0.1:4173 in a browser with WebGL 2 support. No dependency inst
 - Orbit: drag, scroll to zoom, and right-drag to pan.
 - Fly: drag to steer; WASD to move; Q/E to descend/ascend; Shift to accelerate.
 - Drift: automatic slow orbit.
-- Six viewpoints include the birch grove, beach cliff, and blueberry patch.
+- Seven viewpoints include the birch grove, beach cliff, blueberry patch, and woodland pond.
 - Spring, summer, autumn, and winter change foliage, berries/blossoms, snow, and lake ice.
 - Controls adjust sunlight, mist, elevation exaggeration, forest visibility, contours, and shadows.
 
-The scene includes pine, birch, oak, willow, fern and blueberry representations, rocks, a modelled beach/cliff, reflective water, wind effects, and snow shaders.
+The scene includes pine, birch, oak, willow, fern and blueberry representations, pinecones, low bushes, rocks, a modelled beach/cliff and pond, reflective water, wind effects, snow shaders, and cloud banks around the map border.
+
+Water uses distance-filtered analytic ripples, softened highlights and antialiased shoreline foam. Terrain and object placement share one triangulated height field; sand blends into the terrain rather than an overlapping ground plane. Fine vegetation no longer produces noisy self-shadows. The look is an original stylized interpretation, not assets from a commercial game.
+
+Run the terrain-placement regression check with `node tests/terrain.test.mjs`. It compares sampled heights against actual mesh raycasts and verifies that the pond basin lies below its water surface.
 
 ## Source layout
 
@@ -33,13 +37,15 @@ The scene includes pine, birch, oak, willow, fern and blueberry representations,
 | `dist/nature.js` | Birch trees, leaves and ferns |
 | `dist/habitat.js` | Oak/willow trees, blueberries, rocks, cliff, beach and snow |
 | `dist/lake.js` | Reflective water, ripples and shoreline foam |
+| `dist/terrain.js` | Shared height field, landscaped pond basin, blended ground and sand |
+| `dist/frontier.js` | Pinecones, low bushes, grass and border clouds |
 | `dist/dem.png`, `dist/region.json` | Terrarium elevation tile and its bounds |
 | `dist/index.html`, `dist/style.css` | Interface and styling |
 | `.openai/hosting.json` | Existing Sites deployment identity; not needed for local running |
 
 ## Geography and credits
 
-The elevation is real data; the vegetation, beach, cliff, weather and seasons are artistic reconstructions. Oak and ornamental willow forms are imaginative additions rather than surveyed local habitat. Relief defaults to 2×; choose 1× for unexaggerated elevations. This is not a navigation map.
+The base elevation comes from real data; the vegetation, beach, cliff, pond, local ground variation, softened lake shores, weather and seasons are artistic reconstructions. Oak and ornamental willow forms are imaginative additions rather than surveyed local habitat. Relief defaults to 2×; choose 1× for unexaggerated elevations. This is not a navigation map.
 
 - Elevation: [Mapzen/Tilezen Terrain Tiles on AWS](https://registry.opendata.aws/terrain-tiles/), Terrarium tile `11/1179/476`.
 - Europe: produced using Copernicus data and information funded by the European Union — EU-DEM layers.

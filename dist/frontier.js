@@ -1,0 +1,30 @@
+import * as THREE from 'three';
+import {snowMaterial} from './habitat.js';
+
+export function pineCrown(){
+ const g=new THREE.CylinderGeometry(.03,1,1,12,7),p=g.attributes.position;
+ for(let i=0;i<p.count;i++){const y=p.getY(i),a=Math.atan2(p.getZ(i),p.getX(i));const whorl=.90+.10*Math.sin((y+.5)*45.)+.06*Math.sin(a*7.+y*17.);p.setX(i,p.getX(i)*whorl);p.setZ(i,p.getZ(i)*whorl)}g.computeVertexNormals();return g;
+}
+
+export function createFrontier({scene,field,W,base,ground,placements,nature,rand,snow}){
+ const group=new THREE.Group();scene.add(group);const points=[],cones=[];const pond=field.pond;let relief=2;
+ const clear=(x,z)=>field.sample(x,z)>pond.elevation+1||Math.hypot((x-pond.x)/pond.rx,(z-pond.z)/pond.rz)>1.4;
+ for(let i=0;i<650;i++){const a=rand()*6.28,r=1.15+rand()*.8,x=pond.x+Math.cos(a)*pond.rx*r,z=pond.z+Math.sin(a)*pond.rz*r;if(clear(x,z))points.push({x,z,h:field.sample(x,z)-base,s:.65+rand()*1.4,r:rand()*6.28})}
+ for(let i=0;i<placements.length;i+=45){const p=placements[i];points.push({x:p.x+6,z:p.z+3,h:field.sample(p.x+6,p.z+3)-base,s:.65+rand()*1.5,r:rand()*6.28})}
+ for(let i=0;i<800;i++){const a=rand()*6.28,r=rand()*150,x=nature.anchor.x+Math.cos(a)*r,z=nature.anchor.z+Math.sin(a)*r;if(clear(x,z))cones.push({x,z,h:field.sample(x,z)-base,s:.8+rand()*.7,r:rand()*6.28})}
+ for(let i=0;i<90;i++){const x=pond.x-pond.rx-10+(rand()-.5)*25,z=pond.z+40+(rand()-.5)*35;cones.push({x,z,h:field.sample(x,z)-base,s:1+rand(),r:rand()*6.28})}
+ const shrubMat=new THREE.MeshStandardMaterial({color:'#6f9b50',roughness:1});snowMaterial(shrubMat,snow);
+ const shrubs=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,2),shrubMat,points.length*3);shrubs.castShadow=true;shrubs.receiveShadow=false;group.add(shrubs);
+ const cv=[];function triangle(a,b,c){cv.push(...a,...b,...c)}
+ // Overlapping, staggered woody scales; no texture or flat decal.
+ for(let row=0;row<8;row++){const y=row*.052,r=Math.sin((row/8)*Math.PI)*.14+.035;for(let j=0;j<9;j++){const a=j*6.283/9+(row%2)*.349;const p=(rad,ang,yy)=>[Math.cos(ang)*rad,yy,Math.sin(ang)*rad];const center=p(r,a,y),left=p(r*.9,a-.30,y+.042),right=p(r*.9,a+.30,y+.042),tip=p(r+.065,a,y+.021);triangle(center,left,tip);triangle(center,tip,right)}}
+ const cg=new THREE.BufferGeometry();cg.setAttribute('position',new THREE.Float32BufferAttribute(cv,3));cg.computeVertexNormals();const cm=new THREE.MeshStandardMaterial({color:'#805735',roughness:1,side:THREE.DoubleSide});snowMaterial(cm,snow);const pinecones=new THREE.InstancedMesh(cg,cm,cones.length);pinecones.castShadow=false;pinecones.receiveShadow=false;group.add(pinecones);
+ const grassVerts=[];for(let j=0;j<5;j++){const a=j*2.4,x=Math.cos(a)*.18,z=Math.sin(a)*.18;grassVerts.push(x-.03,0,z,x+.03,0,z,x+.10,.40+j*.035,z+.05)}const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.Float32BufferAttribute(grassVerts,3));gg.computeVertexNormals();const gm=new THREE.MeshStandardMaterial({color:'#91a86c',roughness:1,side:THREE.DoubleSide});const grasses=new THREE.InstancedMesh(gg,gm,points.length*4);group.add(grasses);
+ const d=new THREE.Object3D();function matrices(v){relief=v;points.forEach((p,i)=>{for(let j=0;j<3;j++){d.position.set(p.x+Math.cos(j*2.4)*p.s*.4,p.h*v+p.s*(.32+j*.12),p.z+Math.sin(j*2.4)*p.s*.4);d.rotation.set(0,p.r,0);d.scale.set(p.s*.65,p.s*.46,p.s*.65);d.updateMatrix();shrubs.setMatrixAt(i*3+j,d.matrix)}for(let j=0;j<4;j++){const x=p.x+Math.cos(j*2)*p.s*1.6,z=p.z+Math.sin(j*2)*p.s*1.6;d.position.set(x,(field.sample(x,z)-base)*v+.08,z);d.rotation.set(0,p.r+j,0);d.scale.setScalar(p.s);d.updateMatrix();grasses.setMatrixAt(i*4+j,d.matrix)}});cones.forEach((p,i)=>{d.position.set(p.x,p.h*v+.10,p.z);d.rotation.set(.9,p.r,.4);d.scale.setScalar(p.s);d.updateMatrix();pinecones.setMatrixAt(i,d.matrix)});for(const m of [shrubs,pinecones,grasses]){m.instanceMatrix.needsUpdate=true;m.computeBoundingSphere()}}
+ matrices(relief);
+ const cloudTime={value:0};
+ const cloudMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,depthTest:true,uniforms:{uTime:cloudTime,uTint:{value:new THREE.Color('#e8f6ff')}},vertexShader:`varying vec2 vUv;varying float vSeed;void main(){vUv=uv;vSeed=instanceMatrix[3].x*.01+instanceMatrix[3].z*.012;vec3 center=instanceMatrix[3].xyz;float width=length(instanceMatrix[0].xyz),height=length(instanceMatrix[1].xyz);vec3 right=vec3(viewMatrix[0][0],viewMatrix[1][0],viewMatrix[2][0]),up=vec3(viewMatrix[0][1],viewMatrix[1][1],viewMatrix[2][1]);vec3 world=center+right*position.x*width+up*position.y*height;gl_Position=projectionMatrix*viewMatrix*vec4(world,1.);}`,fragmentShader:`uniform float uTime;uniform vec3 uTint;varying vec2 vUv;varying float vSeed;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}void main(){vec2 q=vUv*2.-1.;float n=noise(q*3.+vec2(vSeed,uTime*.008));float edge=1.-smoothstep(.40,.98,length(q*vec2(1.,1.15))+n*.20);float puff=.75+.25*noise(q*7.+vSeed);float alpha=edge*puff*.72;if(alpha<.015)discard;vec3 c=mix(uTint*.81,uTint,smoothstep(-.7,.65,q.y));gl_FragColor=vec4(c,alpha);#include <tonemapping_fragment>\n#include <colorspace_fragment>}`.replace(';#include',';\n#include')});
+ const clouds=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),cloudMat,320);for(let i=0;i<320;i++){const side=i%4,t=(rand()-.5)*W*1.22,edge=W*.50+rand()*280;d.position.set(side<2?(side===0?-edge:edge):t,120+rand()*680,side>=2?(side===2?-edge:edge):t);d.rotation.set(0,0,0);d.scale.set(700+rand()*700,380+rand()*520,1);d.updateMatrix();clouds.setMatrixAt(i,d.matrix)}clouds.frustumCulled=false;clouds.renderOrder=3;scene.add(clouds);
+ return{matrices,setVisible(v){group.visible=v},season(s){shrubs.visible=grasses.visible=s!=='winter';pinecones.visible=true;shrubMat.color.set(s==='autumn'?'#a5934c':s==='spring'?'#83ae57':'#628d49');gm.color.set(s==='autumn'?'#b6ad70':'#91a86c')},tick(t){cloudTime.value=t},getView(){return{p:[pond.x-pond.rx-40,ground(pond.x-pond.rx-40,pond.z+115)+48,pond.z+115],t:[pond.x,(pond.elevation-base)*relief+3,pond.z]}}};
+}
+

@@ -1,0 +1,7 @@
+{
+  "name": "taiga-inari-explorer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An interactive seasonal Three.js landscape based on Finnish Lapland elevation data",
+  "scripts": { "start": "node serve.mjs" }
+}
